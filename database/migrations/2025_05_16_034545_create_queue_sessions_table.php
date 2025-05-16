@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('queues', function (Blueprint $table) {
+        Schema::create('queue_sessions', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->enum('status', ['melayani', 'istirahat', 'libur'])->default('melayani');
-            $table->foreignId('current_queue_id')->nullable();
-            $table->integer('total_queues')->nullable();
+            $table->foreignId('queue_id')->constrained()->onDelete('cascade');
+            $table->date('date'); // Tanggal sesi
+            $table->timestamp('start_time')->nullable();
+            $table->timestamp('end_time')->nullable();
             $table->timestamps();
         });
     }
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('queues');
+        Schema::dropIfExists('queue_sessions');
     }
 };

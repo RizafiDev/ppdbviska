@@ -5,13 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Queue extends Model
+class QueueSession extends Model
 {
     use HasFactory, Notifiable;
     protected $fillable = [
-        'name',
-        'status',
-        'current_queue_id',
-        'total_queues',
+        'queue_id',
+        'date',
+        'start_time',
+        'end_time',
     ];
 }
