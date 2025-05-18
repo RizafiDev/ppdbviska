@@ -71,8 +71,42 @@ class QueueNumberResource extends Resource
                 ->label('Filter Layanan'),
             ])
             ->actions([
+                Tables\Actions\Action::make('set_menunggu')
+        ->label('Menunggu')
+        ->color('gray')
+        ->icon('heroicon-o-clock')
+        ->action(fn ($record) => $record->update(['status' => 'menunggu']))
+        ->visible(fn ($record) => $record->status !== 'menunggu'),
+
+    Tables\Actions\Action::make('set_dipanggil')
+        ->label('Dipanggil')
+        ->color('warning')
+        ->icon('heroicon-o-arrow-right-circle')
+        ->action(fn ($record) => $record->update([
+            'status' => 'dipanggil',
+            'called_at' => now(),
+        ]))
+        ->visible(fn ($record) => $record->status !== 'dipanggil'),
+
+    Tables\Actions\Action::make('set_selesai')
+        ->label('Selesai')
+        ->color('success')
+        ->icon('heroicon-o-check-circle')
+        ->action(fn ($record) => $record->update([
+            'status' => 'selesai',
+            'finished_at' => now(),
+        ]))
+        ->visible(fn ($record) => $record->status !== 'selesai'),
+
+    Tables\Actions\Action::make('set_batal')
+        ->label('Batal')
+        ->color('danger')
+        ->icon('heroicon-o-x-circle')
+        ->action(fn ($record) => $record->update(['status' => 'batal']))
+        ->visible(fn ($record) => $record->status !== 'batal'),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+                
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

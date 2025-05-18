@@ -21,4 +21,14 @@ class QueueNumber extends Model
     {
         return $this->belongsTo(Queue::class);
     }
+    public function queueNumbers()
+{
+    return $this->hasMany(QueueNumber::class)->latest();
+}
+public function currentQueueNumber()
+{
+    return $this->hasOne(QueueNumber::class)
+        ->where('status', 'dipanggil')
+        ->latestOfMany(); // Ambil yang terbaru berdasarkan created_at
+}
 }

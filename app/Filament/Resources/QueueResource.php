@@ -19,23 +19,31 @@ class QueueResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-queue-list';
     protected static ?string $navigationGroup = 'Antrian';
-    protected static ?string $navigationLabel = 'Jenis Antrian';
+    protected static ?string $navigationLabel = 'Tempat Layanan';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-            Forms\Components\TextInput::make('name')->required()->maxLength(255),
+           Forms\Components\TextInput::make('name')
+                ->required()
+                ->maxLength(255),
+
             Forms\Components\Select::make('status')
-                ->options([
-                    'melayani' => 'Melayani',
-                    'istirahat' => 'Istirahat',
-                    'libur' => 'Libur',
-                ])
-                ->default('melayani')
+                ->options(Queue::STATUSES)
                 ->required(),
-            Forms\Components\TextInput::make('current_queue_id')->numeric()->nullable(),
-            Forms\Components\TextInput::make('total_queues')->numeric()->nullable(),
+
+            Forms\Components\Select::make('current_queue_id')
+                ->relationship('currentQueue', 'queue_number')
+                ->label('Nomor Antrian Saat Ini')
+                ->searchable()
+                ->preload()
+                ->nullable(),
+
+            Forms\Components\TextInput::make('total_queues')
+                ->numeric()
+                ->disabled()
+                ->dehydrated(false),
             ]);
     }
 
@@ -43,20 +51,52 @@ class QueueResource extends Resource
     {
         return $table
             ->columns([
-            Tables\Columns\TextColumn::make('name')->searchable(),
-            Tables\Columns\TextColumn::make('status')->badge()->color(fn (string $state): string => match ($state) {
-        'istirahat' => 'warning',
-        'melayani' => 'success',
-        'libur' => 'danger',
-    }),
-            Tables\Columns\TextColumn::make('current_queue_id'),
-            Tables\Columns\TextColumn::make('total_queues'),
-            Tables\Columns\TextColumn::make('created_at')->dateTime(),
+            Tables\Columns\TextColumn::make('name')->sortable()->searchable(),
+            Tables\Columns\TextColumn::make('status')
+                ->badge()
+                ->color(fn (string $state): string => match ($state) {
+                    'melayani' => 'success',
+                    'istirahat' => 'warning',
+                    'libur' => 'danger',
+                    default => 'gray',
+                }),
+            Tables\Columns\TextColumn::make('currentQueue.queue_number')
+                ->label('Antrian Saat Ini'),
+            Tables\Columns\TextColumn::make('total_queues')
+                ->label('Total Antrian')
+                ->sortable(),
+            Tables\Columns\TextColumn::make('created_at')->dateTime()->label('Dibuat'),
             ])
             ->filters([
                 //
             ])
             ->actions([
+                Tables\Actions\Action::make('set_melayani')
+        ->label('Melayani')
+        ->color('success')
+        ->icon('heroicon-o-check-circle')
+        ->action(function ($record) {
+            $record->update(['status' => 'melayani']);
+        })
+        ->visible(fn ($record) => $record->status !== 'melayani'),
+
+    Tables\Actions\Action::make('set_istirahat')
+        ->label('Istirahat')
+        ->color('warning')
+        ->icon('heroicon-o-pause')
+        ->action(function ($record) {
+            $record->update(['status' => 'istirahat']);
+        })
+        ->visible(fn ($record) => $record->status !== 'istirahat'),
+
+    Tables\Actions\Action::make('set_libur')
+        ->label('Libur')
+        ->color('danger')
+        ->icon('heroicon-o-x-circle')
+        ->action(function ($record) {
+            $record->update(['status' => 'libur']);
+        })
+        ->visible(fn ($record) => $record->status !== 'libur'),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Queue extends Model
 {
@@ -22,11 +23,19 @@ class Queue extends Model
     'libur' => 'Libur'
 ];
 
-    public function queueNumbers()
-    {
-        return $this->hasMany(QueueNumber::class);
-    }
+public function currentQueueNumber(): HasOne
+{
+    return $this->hasOne(\App\Models\QueueNumber::class)
+        ->where('status', 'dipanggil')
+        ->orderBy('created_at', 'desc');
+}
 
+public function queueNumbers()
+{
+    return $this->hasMany(QueueNumber::class)->latest();
+}
+
+    
     public function queueSessions()
     {
         return $this->hasMany(QueueSession::class);
@@ -36,8 +45,4 @@ class Queue extends Model
     {
         return $this->belongsTo(QueueNumber::class, 'current_queue_id');
     }
-    public function currentQueueNumber()
-{
-    return $this->belongsTo(QueueNumber::class, 'current_queue_id');
-}
 }

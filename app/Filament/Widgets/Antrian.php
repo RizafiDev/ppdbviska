@@ -40,9 +40,11 @@ protected function getCardWidth(): string
     
     // Load queues data
     public function loadQueues()
-    {
-        $this->queues = Queue::with(['queueNumbers', 'currentQueueNumber'])->get();
-    }
+{
+    $this->queues = Queue::with(['queueNumbers', 'currentQueueNumber'])
+        ->where('status', 'melayani')
+        ->get();
+}
     
     // Method to create a new queue number directly
     public function createQueueNumber($queueId)
