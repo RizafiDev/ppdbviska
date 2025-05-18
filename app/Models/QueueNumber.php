@@ -7,13 +7,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class QueueNumber extends Model
 {
-    use HasFactory, Notifiable;
+    use HasFactory;
+
     protected $fillable = [
-        'queue_number',
         'queue_id',
-        'qr_code',
+        'queue_number',
         'status',
         'called_at',
         'finished_at',
     ];
+
+    public function queue()
+    {
+        return $this->belongsTo(Queue::class);
+    }
 }
