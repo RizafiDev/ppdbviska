@@ -1,11 +1,16 @@
 <x-filament-widgets::widget>
     <x-filament::section>
-        <div class="pb-4 pt-4">
+        <div class="pb-8 pt-4">
             <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 px-6">
                 Daftar Tempat Layanan
             </h2>
         </div>
-        
+        <div class="px-6 pb-4">
+    <form wire:submit.prevent>
+        {{ $this->form }}
+    </form>
+</div>
+
         <div class="grid md:grid-cols-3 gap-6 px-6 pb-6 w-full">
             @foreach ($queues as $queue)
                 <div 

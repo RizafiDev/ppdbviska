@@ -4,27 +4,46 @@ namespace App\Filament\Widgets;
 
 use App\Models\Queue;
 use App\Models\QueueNumber;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Str;
-// Import EscPos classes
-use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
-use Mike42\Escpos\Printer;
 
-class Antrian extends Widget
+class Antrian extends Widget implements HasForms
 {
+    use InteractsWithForms;
+
     protected static string $view = 'filament.widgets.antrian';
     protected int | string | array $columnSpan = 'full';
 
     public $queues;
+    public $selectedPort;
     
     // Printer settings
-    protected $printerPort = "COM3";
-    protected $baudRate = 9600;  // Baud rate for the printer
+    protected $baudRate = 9600;  // Common baud rate for thermal printers
     
     public function mount()
+{
+    $this->loadQueues();
+
+    // Hapus default port COM3
+    $this->form->fill([
+        'selectedPort' => null,
+    ]);
+}
+
+    
+    protected function getFormSchema(): array
     {
-        $this->loadQueues();
+        return [
+            Select::make('selectedPort')
+                ->label('Pilih Port Printer')
+                ->options($this->getAvailableSerialPorts())
+                ->required()
+                ->searchable(),
+        ];
     }
     
     public function loadQueues()
@@ -36,6 +55,9 @@ class Antrian extends Widget
     
     public function createQueueNumber($queueId)
     {
+        $data = $this->form->getState();
+        $this->selectedPort = $data['selectedPort'] ?? null;
+        
         $queue = Queue::find($queueId);
         
         if (!$queue) {
@@ -46,6 +68,14 @@ class Antrian extends Widget
                 ->send();
             return;
         }
+        if (!$this->selectedPort) {
+        Notification::make()
+            ->title('Pilih Port Printer')
+            ->body('Silakan pilih port printer terlebih dahulu sebelum mencetak.')
+            ->warning()
+            ->send();
+        return;
+    }
         
         $queuePrefix = Str::of($queue->name)
             ->replaceMatches('/[^a-zA-Z0-9]/', '')
@@ -79,7 +109,7 @@ class Antrian extends Widget
         $estimatedTime = $this->calculateEstimatedTime($queue);
         
         // Print ticket
-        $printResult = $this->printTicket(
+        $printResult = $this->printToThermalPrinter(
             $newQueueNumber,
             $queue->name,
             $createdQueue->created_at->format('d/m/Y H:i:s'),
@@ -103,6 +133,43 @@ class Antrian extends Widget
         $this->loadQueues();
     }
     
+    public function getAvailableSerialPorts(): array
+    {
+        $ports = [];
+        
+        // Windows - menggunakan perintah mode
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $output = [];
+            @exec('mode', $output);
+
+            foreach ($output as $line) {
+                if (preg_match('/^COM\d+:/', $line, $matches)) {
+                    $port = rtrim($matches[0], ':');
+                    $ports[$port] = $port;
+                }
+            }
+        } else {
+            // Linux/Mac - cek device files
+            $deviceFiles = glob('/dev/tty*');
+            foreach ($deviceFiles as $device) {
+                if (preg_match('/\/dev\/tty(USB|ACM|S)/', $device)) {
+                    $ports[$device] = $device;
+                }
+            }
+        }
+        
+        // Tambahkan port default jika tidak ada yang terdeteksi
+        if (empty($ports)) {
+            $ports = [
+                'COM3' => 'COM3',
+                'COM4' => 'COM4',
+                '/dev/ttyUSB0' => '/dev/ttyUSB0'
+            ];
+        }
+        
+        return $ports;
+    }
+
     protected function calculateEstimatedTime(Queue $queue): string
     {
         // Get waiting count directly from database
@@ -128,92 +195,25 @@ class Antrian extends Widget
         return "±{$hours} jam {$minutes} menit";
     }
     
-    /**
-     * Print a queue ticket using mike42/escpos-php
-     * 
-     * @param string $queueNumber The queue number
-     * @param string $queueName The name of the queue
-     * @param string $createdAt The creation date and time
-     * @param string $estimatedTime The estimated waiting time
-     * @return bool Whether printing was successful
-     */
-    protected function printTicket($queueNumber, $queueName, $createdAt, $estimatedTime): bool
+    protected function printToThermalPrinter($queueNumber, $queueName, $createdAt, $estimatedTime): bool
     {
-        try {
-            // Connect to the printer
-            $connector = new WindowsPrintConnector($this->printerPort);
-            $printer = new Printer($connector);
-            
-            // Start printing
-            $printer->initialize();
-            
-            // Print header
-            $printer->setJustification(Printer::JUSTIFY_CENTER);
-            $printer->setEmphasis(true);
-            $printer->text("TIKET ANTRIAN\n");
-            $printer->setEmphasis(false);
-            $printer->text("{$queueName}\n\n");
-            
-            // Print queue number
-            $printer->setJustification(Printer::JUSTIFY_LEFT);
-            $printer->setEmphasis(true);
-            $printer->text("Nomor  : {$queueNumber}\n");
-            $printer->setEmphasis(false);
-            $printer->text("Tanggal: {$createdAt}\n");
-            $printer->text("Estimasi: {$estimatedTime}\n");
-            $printer->feed(1);
-            
-            // Print footer
-            $printer->setJustification(Printer::JUSTIFY_CENTER);
-            $printer->text("Terima kasih atas kunjungan Anda\n");
-            
-            // Feed and cut
-            $printer->feed(3);
-            $printer->cut();
-            $printer->close();
-            
-            return true;
-        } catch (\Exception $e) {
-            \Log::error('Thermal printer error: ' . $e->getMessage());
+        if (empty($this->selectedPort)) {
+            \Log::error('No printer port selected');
             return false;
         }
-    }
-    
-    /**
-     * Alternative method using serial communication if WindowsPrintConnector doesn't work
-     * This can be used as a fallback
-     */
-    protected function printTicketSerial($queueNumber, $queueName, $createdAt, $estimatedTime): bool
-    {
+
         try {
-            // Open COM port with specified baud rate
-            $fp = @fopen("\\\\.\\{$this->printerPort}", 'w');
-            
-            if (!$fp) {
-                throw new \Exception("Failed to open printer port. Make sure printer is connected to " . $this->printerPort);
-            }
-            
-            // Configure serial port
-            if (function_exists('stream_set_write_buffer')) {
-                stream_set_write_buffer($fp, 0);
-            }
-            
-            // Set baud rate if running on Windows
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                exec("mode {$this->printerPort}: BAUD={$this->baudRate} PARITY=N DATA=8 STOP=1 XON=OFF");
-            }
-            
-            // ESC/POS Commands
             $ESC = "\x1B";
-            $GS = "\x1D";
-            
+            $GS  = "\x1D";
+
+            // Format ESC/POS commands
             $commands = [
                 $ESC . '@',                  // Initialize printer
                 $ESC . 'a' . "\x01",         // Center alignment
                 $ESC . 'E' . "\x01",         // Bold on
                 "TIKET ANTRIAN\n",
                 $ESC . 'E' . "\x00",         // Bold off
-                "{$queueName}\n\n",
+                "{$queueName}\n",
                 $ESC . 'a' . "\x00",         // Left alignment
                 $ESC . 'E' . "\x01",         // Bold on
                 "Nomor  : {$queueNumber}\n",
@@ -228,15 +228,25 @@ class Antrian extends Widget
             ];
 
             $data = implode('', $commands);
-            
+
+            $fp = @fopen("\\\\.\\{$this->selectedPort}", 'w');
+            if (!$fp) {
+                throw new \Exception("Gagal membuka port printer. Pastikan printer terhubung ke " . $this->selectedPort);
+            }
+
+            // Set binary mode
+            if (function_exists('stream_set_write_buffer')) {
+                stream_set_write_buffer($fp, 0);
+            }
+
             $bytesWritten = fwrite($fp, $data);
             fflush($fp);
             fclose($fp);
-            
+
             if ($bytesWritten === false || $bytesWritten != strlen($data)) {
-                throw new \Exception("Failed to write data to printer.");
+                throw new \Exception("Gagal menulis data ke printer.");
             }
-            
+
             return true;
         } catch (\Exception $e) {
             \Log::error('Thermal printer error: ' . $e->getMessage());
