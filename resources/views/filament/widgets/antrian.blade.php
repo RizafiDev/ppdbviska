@@ -1,7 +1,7 @@
 <x-filament-widgets::widget>
     <x-filament::section>
         <div class="pb-4 pt-4">
-            <h2 class="text-xl font-bold  text-gray-800 dark:text-gray-200 px-6">
+            <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 px-6">
                 Daftar Tempat Layanan
             </h2>
         </div>
@@ -20,9 +20,9 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <p class="text-sm text-gray-500 dark:text-gray-400">Nomor Antrian Saat Ini</p>
-                               <p class="text-2xl font-bold text-gray-800 dark:text-gray-200">
-    {{ optional($queue->currentQueueNumber)->queue_number ?? '-' }}
-</p>
+                                <p class="text-2xl font-bold text-gray-800 dark:text-gray-200">
+                                    {{ optional($queue->currentQueueNumber)->queue_number ?? '-' }}
+                                </p>
                             </div>
                             
                             <div>
@@ -44,21 +44,19 @@
                             </div>
                              <div>
                                 <p class="text-sm text-gray-500 dark:text-gray-400">Sisa Antrian</p>
-                               @php
-    $sisaAntrian = $queue->queueNumbers
-        ->where('status', 'menunggu')
-        ->count();
+                                @php
+                                    $sisaAntrian = $queue->queueNumbers
+                                        ->where('status', 'menunggu')
+                                        ->count();
 
-    // Kurangi 1 jika ada currentQueueNumber
-    if ($queue->currentQueueNumber) {
-        $sisaAntrian = max(0, $sisaAntrian - 1);
-    }
-@endphp
+                                    if ($queue->currentQueueNumber) {
+                                        $sisaAntrian = max(0, $sisaAntrian - 1);
+                                    }
+                                @endphp
 
-<p class="text-2xl font-bold text-gray-800 dark:text-gray-200">
-    {{ $sisaAntrian }}
-</p>
-
+                                <p class="text-2xl font-bold text-gray-800 dark:text-gray-200">
+                                    {{ $sisaAntrian }}
+                                </p>
                             </div>
                         </div>
                     </div>
