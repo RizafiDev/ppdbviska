@@ -35,11 +35,6 @@ public function queueNumbers()
     return $this->hasMany(QueueNumber::class)->latest();
 }
 
-    
-    public function queueSessions()
-    {
-        return $this->hasMany(QueueSession::class);
-    }
 
     public function currentQueue()
     {

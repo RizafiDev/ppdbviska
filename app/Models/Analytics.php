@@ -4,15 +4,26 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Analytics extends Model
 {
     use HasFactory;
 
-    public function queueNumber(): HasOne
+    protected $fillable = [
+        'queue_id',
+        'date',
+        'period_type',
+        'period_label',
+        'total_queue_created',
+        'total_queue_called',
+        'total_queue_finished',
+        'total_queue_canceled',
+        'avg_wait_time',
+        'avg_service_time',
+    ];
+
+    public function queue()
     {
-        return $this->hasOne(QueueNumber::class);
+        return $this->belongsTo(Queue::class);
     }
-    
 }
