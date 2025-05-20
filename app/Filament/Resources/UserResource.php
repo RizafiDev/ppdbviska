@@ -28,13 +28,20 @@ class UserResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('name')->required(),
                 Forms\Components\TextInput::make('email')->required()->email(),
-                Forms\Components\TextInput::make('password')->required()->password(),
-                Forms\Components\Select::make('role')->required()->options([
-        'master' => 'Master',
-        'register' => 'Register',
-        'guider' => 'Guider',
-        'operator' => 'Operator',
-    ]),
+                Forms\Components\Select::make('roles')
+                    ->label('Role')
+                    ->multiple()
+                    ->relationship('roles', 'name')
+                    ->preload(),
+                Forms\Components\Select::make('status')
+                    ->label('Status')
+                    ->options([
+                        'aktif' => 'Aktif',
+                        'tidakAktif' => 'Tidak Aktif',
+                    ])
+                    ->default('aktif')
+                    ->required(),
+                Forms\Components\TextInput::make('password')->password()->label('Password')->required(),
             ]);
     }
 
@@ -45,14 +52,14 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('id')->label('ID')->disableClick(),
                 Tables\Columns\TextColumn::make('name')->label('NAME')->disableClick(),
                 Tables\Columns\TextColumn::make('email')->label('EMAIL')->disableClick(),
-                Tables\Columns\TextColumn::make('role')->label('ROLE')->badge()->disableClick()
-    ->color(fn (string $state): string => match ($state) {
-        'guider' => 'gray',
-        'operator' => 'warning',
-        'register' => 'success',
-        'master' => 'danger',
-    }),
-                
+                Tables\Columns\TextColumn::make('roles.name')->label('ROLE')->disableClick(),
+                Tables\Columns\TextColumn::make('status')
+                    ->label('STATUS')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'aktif' => 'success',
+                        'tidakAktif' => 'danger',
+                    }),
             ])
             ->filters([
                 //
@@ -60,6 +67,23 @@ class UserResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+                Tables\Actions\Action::make('aktifkan')
+                    ->label('Aktifkan')
+                    ->icon('heroicon-o-check-circle')
+                    ->visible(fn ($record) => $record->status === 'tidakAktif')
+                    ->action(function ($record) {
+                        $record->status = 'aktif';
+                        $record->save();
+                    }),
+                Tables\Actions\Action::make('nonaktifkan')
+                    ->label('Nonaktifkan')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn ($record) => $record->status === 'aktif')
+                    ->action(function ($record) {
+                        $record->status = 'tidakAktif';
+                        $record->save();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

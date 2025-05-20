@@ -31,14 +31,9 @@ class QueueResource extends Resource
 
                 Forms\Components\Select::make('status')
                     ->options(Queue::STATUSES)
-                    ->required(),
-
-                Forms\Components\Select::make('current_queue_id')
-                    ->relationship('currentQueue', 'queue_number')
-                    ->label('Nomor Antrian Saat Ini')
-                    ->searchable()
-                    ->preload()
-                    ->nullable(),
+                    ->required()
+                    ->default('melayani')
+                    ->label('Status'),
             ]);
     }
 
