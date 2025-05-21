@@ -56,7 +56,7 @@ class AnalyticsResource extends Resource
                 Tables\Columns\TextColumn::make('queue.name')->label('Tempat Layanan'),
                 Tables\Columns\TextColumn::make('period_type')->label('Tipe Periode'),
                 Tables\Columns\TextColumn::make('total_queue_created')->label('Total Antrian Dibuat'),
-                Tables\Columns\TextColumn::make('avg_service_time')->label('Rata-rata Waktu Layanan')->suffix(' menit'),
+                // Tables\Columns\TextColumn::make('avg_service_time')->label('Rata-rata Waktu Layanan')->suffix(' menit'),
                 
             ])
             ->filters([
@@ -64,7 +64,7 @@ class AnalyticsResource extends Resource
             ])
             
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

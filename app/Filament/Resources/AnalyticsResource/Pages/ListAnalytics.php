@@ -12,61 +12,71 @@ use Carbon\Carbon;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\DatePicker;
-
+use Illuminate\Database\Eloquent\Builder;
 
 class ListAnalytics extends ListRecords
 {
     protected static string $resource = AnalyticsResource::class;
+    
     protected function getHeaderWidgets(): array
     {
         return [
             AnalyticWidget::class,
         ];
     }
-    protected function getFilters(): array
+
+    // Method yang benar untuk menambahkan filter di Filament v3
+    public function getTableFilters(): array
     {
         return [
-            // Filter Tanggal
-            Filter::make('date')
+            Filter::make('tanggal_laporan')
                 ->form([
-                    DatePicker::make('date')
-                        ->label('Tanggal')
+                    DatePicker::make('tanggal_laporan')
+                        ->label('Tanggal Laporan'),
                 ])
-                ->query(function (\Illuminate\Database\Eloquent\Builder $query, array $data) {
-                    if ($data['date']) {
-                        $query->whereDate('created_at', $data['date']);
-                    }
+                ->query(function (Builder $query, array $data): Builder {
+                    return $query
+                        ->when(
+                            $data['tanggal_laporan'] ?? null,
+                            fn (Builder $query, $date): Builder => $query->whereDate('tanggal_laporan', $date),
+                        );
                 }),
 
-            // Filter Tempat Layanan (Queue)
-            SelectFilter::make('queue_id')
-                ->label('Tempat Layanan')
-                ->options(
-                    Queue::all()->pluck('name', 'id')
-                )
-                ->searchable(),
-
-            // Filter Periode
-            SelectFilter::make('period_type')
-                ->label('Tipe Periode')
+            SelectFilter::make('periode')
                 ->options([
-                    'daily' => 'Harian',
-                    'weekly' => 'Mingguan',
-                    'monthly' => 'Bulanan',
-                ]),
+                    'daily' => 'Daily',
+                    'weekly' => 'Weekly',
+                    'monthly' => 'Monthly',
+                ])
+                ->query(function (Builder $query, array $data): Builder {
+                    return $query
+                        ->when(
+                            $data['value'] ?? null,
+                            fn (Builder $query, $periode): Builder => $query->where('periode', $periode),
+                        );
+                }),
+
+            SelectFilter::make('tempat_layanan_id')
+                ->label('Tempat Layanan')
+                ->options(Queue::all()->pluck('name', 'id'))
+                ->query(function (Builder $query, array $data): Builder {
+                    return $query
+                        ->when(
+                            $data['value'] ?? null,
+                            fn (Builder $query, $id): Builder => $query->where('tempat_layanan_id', $id),
+                        );
+                }),
         ];
     }
 
     protected function getHeaderActions(): array
     {
         return [
-
-            // Actions\CreateAction::make(),
             Actions\Action::make('generate')
                 ->label('Generate Laporan')
                 ->action(function (array $data) {
                     \App\Services\AnalyticsService::generate(
-                        \Carbon\Carbon::parse($data['date']),
+                        Carbon::parse($data['date']),
                         $data['period_type'],
                         $data['queue_id'] ?? null,
                     );
@@ -77,7 +87,7 @@ class ListAnalytics extends ListRecords
                         ->send();
                 })
                 ->form([
-                    \Filament\Forms\Components\DatePicker::make('date')
+                    DatePicker::make('date')
                         ->label('Tanggal Laporan')
                         ->required(),
 
@@ -93,7 +103,7 @@ class ListAnalytics extends ListRecords
 
                     \Filament\Forms\Components\Select::make('queue_id')
                         ->label('Tempat Layanan')
-                        ->options(\App\Models\Queue::all()->pluck('name', 'id'))
+                        ->options(Queue::all()->pluck('name', 'id'))
                         ->searchable()
                         ->nullable()
                         ->helperText('Kosongkan untuk semua tempat'),

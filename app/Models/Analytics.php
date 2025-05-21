@@ -26,4 +26,8 @@ class Analytics extends Model
     {
         return $this->belongsTo(Queue::class);
     }
+    public function tempatLayanan()
+{
+    return $this->belongsTo(Queue::class, 'tempat_layanan_id');
+}
 }

@@ -13,6 +13,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Support\Enums\Alignment;
+
 
 class QueueNumberResource extends Resource
 {
@@ -50,7 +52,7 @@ class QueueNumberResource extends Resource
         return $table
             ->columns([
             Tables\Columns\TextColumn::make('queue.name')->label('Queue'),
-            Tables\Columns\TextColumn::make('queue_number')->searchable(),
+            Tables\Columns\TextColumn::make('queue_number')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('status')
             ->sortable()
             ->searchable()
@@ -61,15 +63,24 @@ class QueueNumberResource extends Resource
             'selesai' => 'success',
             'batal' => 'danger',
             }), 
-            Tables\Columns\TextColumn::make('called_at')->dateTime()->sortable(),
-            Tables\Columns\TextColumn::make('finished_at')->dateTime()->sortable(),
+            // Tables\Columns\TextColumn::make('called_at')->dateTime()->sortable(),
+            // Tables\Columns\TextColumn::make('finished_at')->dateTime()->sortable(),
             Tables\Columns\TextColumn::make('created_at')->dateTime(),
             ])
             ->filters([
                 SelectFilter::make('queue_id')
                 ->relationship('queue', 'name')
                 ->label('Filter Layanan'),
+                SelectFilter::make('status')
+                ->options([
+                    'menunggu' => 'Menunggu',
+                    'dipanggil' => 'Dipanggil',
+                    'selesai' => 'Selesai',
+                    'batal' => 'Batal',
+                ])
+                ->label('Filter Status'),
             ])
+            ->actionsAlignment('start')
             ->actions([
                 Tables\Actions\Action::make('set_menunggu')
         ->label('Menunggu')
@@ -104,8 +115,8 @@ class QueueNumberResource extends Resource
         ->icon('heroicon-o-x-circle')
         ->action(fn ($record) => $record->update(['status' => 'batal']))
         ->visible(fn ($record) => $record->status !== 'batal'),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                // Tables\Actions\EditAction::make(),
+                // Tables\Actions\DeleteAction::make(),
                 
             ])
             ->bulkActions([
