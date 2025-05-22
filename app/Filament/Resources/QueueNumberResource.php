@@ -50,6 +50,7 @@ class QueueNumberResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+        ->poll('10s')
             ->columns([
             Tables\Columns\TextColumn::make('queue.name')->label('Queue'),
             Tables\Columns\TextColumn::make('queue_number')->searchable()->sortable(),

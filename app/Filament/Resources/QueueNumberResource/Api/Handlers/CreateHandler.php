@@ -20,20 +20,23 @@ class CreateHandler extends Handlers {
         return static::$resource::getModel();
     }
 
-    /**
-     * Create QueueNumber
-     *
-     * @param CreateQueueNumberRequest $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function handler(CreateQueueNumberRequest $request)
     {
         $model = new (static::getModel());
-
         $model->fill($request->all());
-
         $model->save();
 
-        return static::sendSuccessResponse($model, "Successfully Create Resource");
+        // Load relationship untuk mendapatkan nama queue
+        $model->load('queue');
+
+        // Tambahkan QR code data dalam response
+        $response_data = $model->toArray();
+        $response_data['qr_code'] = [
+            'url' => $model->status_check_url,
+            'svg' => $model->getQrCodeSvg(),
+            'base64' => base64_encode($model->qr_code_data)
+        ];
+
+        return static::sendSuccessResponse($response_data, "Successfully Create Resource");
     }
 }
